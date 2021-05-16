@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="notify">
+
+	<!-- 공지사항 목록 -->
+	<select id="notifyList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    NOTIFY_NUMBER,
+			    NOTIFY_TITLE,
+			    NOTIFY_HITCNT,
+			    NOTIFY_REGDATE
+			FROM NOTIFY
+			ORDER BY NOTIFY_REGDATE DESC
+		]]>
+	</select>
+
+	<!-- 공지사항 등록 -->
+	<insert id="notifyWrite" parameterType="hashmap" useGeneratedKeys="true" keyProperty="NOTIFY_NUMBER">
+		<selectKey keyProperty="NOTIFY_NUMBER" resultType="string" order="BEFORE">
+			SELECT NOTIFY_NUMBER_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		<![CDATA[
+			INSERT INTO NOTIFY
+			(
+				NOTIFY_NUMBER,
+			    NOTIFY_TITLE, 
+			    NOTIFY_CONTENT, 
+			    NOTIFY_HITCNT, 
+			    NOTIFY_IMAGE,
+			    NOTIFY_REGDATE 
+			)
+			VALUES
+			(
+				#{NOTIFY_NUMBER, jdbcType=INTEGER}, 
+			    #{NOTIFY_TITLE, jdbcType=VARCHAR}, 
+			    #{NOTIFY_CONTENT, jdbcType=VARCHAR}, 
+			    0, 
+			    #{NOTIFY_IMAGE, jdbcType=VARCHAR},
+			    SYSDATE
+			)
+		]]>
+	</insert>
+
+	<!-- 공지사항 조회수 -->
+	<update id="notifyUpdateHitCnt" parameterType="hashmap">
+		<![CDATA[
+			UPDATE NOTIFY 
+			SET
+				NOTIFY_HITCNT = NVL(NOTIFY_HITCNT, 0) + 1
+			WHERE
+				NOTIFY_NUMBER = #{NOTIFY_NUMBER, jdbcType=INTEGER}	
+		]]>
+	</update>
+
+	<!-- 공지사항 상세보기 -->
+	<select id="notifyDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				NOTIFY_NUMBER,
+				NOTIFY_HITCNT,
+				NOTIFY_REGDATE,
+				NOTIFY_TITLE,
+				NOTIFY_CONTENT,
+				NOTIFY_IMAGE
+			FROM
+				NOTIFY
+			WHERE
+				NOTIFY_NUMBER = #{NOTIFY_NUMBER, jdbcType=INTEGER}		
+		]]>
+	</select>
+
+	<!-- 공지사항 수정 -->
+	<update id="notifyModify" parameterType="hashmap">
+		<![CDATA[
+			UPDATE NOTIFY 
+			SET
+				NOTIFY_TITLE = #{NOTIFY_TITLE, jdbcType=VARCHAR},
+				NOTIFY_CONTENT = #{NOTIFY_CONTENT, jdbcType=VARCHAR},
+				NOTIFY_IMAGE = #{NOTIFY_IMAGE, jdbcType=VARCHAR}
+			WHERE
+				NOTIFY_NUMBER = #{NOTIFY_NUMBER, jdbcType=INTEGER}	
+		]]>
+	</update>
+
+	<!-- 공지사항 삭제 -->
+	<delete id="notifyDelete" parameterType="hashmap">
+		<![CDATA[
+			DELETE FROM NOTIFY 
+			WHERE NOTIFY_NUMBER = #{NOTIFY_NUMBER, jdbcType=INTEGER}
+		]]>
+	</delete>
+
+	<!-- 공지사항 제목 검색 -->
+	<select id="notifySearchTitleList" resultType="hashmap" parameterType="hashmap">
+			<![CDATA[
+		SELECT 
+			NOTIFY_NUMBER,
+			NOTIFY_TITLE,
+			NOTIFY_HITCNT,
+			NOTIFY_REGDATE
+		FROM NOTIFY
+		WHERE NOTIFY_TITLE like '%' || #{isSearch} || '%'
+		ORDER BY NOTIFY_NUMBER DESC
+	]]>
+	</select>
+
+	<!-- 공지사항 글 내용 검색 -->
+	<select id="notifySearchContentList" resultType="hashmap" parameterType="hashmap">
+			<![CDATA[
+		SELECT 
+			NOTIFY_NUMBER,
+			NOTIFY_TITLE,
+			NOTIFY_CONTENT,
+			NOTIFY_HITCNT,
+			NOTIFY_REGDATE
+		FROM NOTIFY
+		WHERE NOTIFY_CONTENT like '%' || #{isSearch} || '%'
+		ORDER BY NOTIFY_NUMBER DESC
+	]]>
+	</select>
+
+	<!-- 공지사항 파일첨부 -->
+	<update id="notifyImage1" parameterType="hashmap">
+		<![CDATA[
+			UPDATE NOTIFY 
+			SET 
+				NOTIFY_IMAGE = #{NOTIFY_IMAGE} 
+			WHERE 
+				NOTIFY_NUMBER = #{NOTIFY_NUMBER}
+		]]>
+	</update>
+
+   <!-- 공지사항 이미지 등록 -->
+   <update id="insertNotifyImage" parameterType="hashmap">
+      <![CDATA[
+         UPDATE NOTIFY SET NOTIFY_IMAGE= #{NOTIFY_IMAGE, jdbcType=VARCHAR} WHERE NOTIFY_NUMBER=#{NOTIFY_NUMBER, jdbcType=INTEGER}
+      ]]>
+   </update>
+</mapper>

@@ -1,0 +1,1026 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="goods">
+	<!-- 상품 색상 뽑기 (안써도 될듯) -->
+	<!-- <select id="selectColor" resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT DISTINCT goods_color AS colorkind 
+			FROM GOODS_KIND
+			WHERE goods_number = ${GOODS_NUMBER}
+		]]>
+	</select> -->
+	
+	<!-- 메인, HOT 아이템 -->
+	<select id="mainHotItem"  resultType="hashMap">
+		<![CDATA[
+	SELECT * FROM 
+				(SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount,
+                count(DISTINCT b.goods_color) as colorcount, 
+                LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind , a.* 
+				FROM( select * from goods where goods_onoff ='0' ) a INNER JOIN goods_kind b ON a.goods_number = b.goods_number 
+		 GROUP BY a.goods_number, a.goods_name, a.goods_price, a.goods_DISPRICE, a.goods_shortdesc, a.goods_desc, 
+					a.goods_thumbnail, a.goods_date, a.goods_category1, a.goods_category2, a.goods_saledate, a.goods_onoff, a.goods_count, a.goods_coordi 
+				ORDER BY SELLCOUNT DESC
+				) WHERE ROWNUM < 13
+		]]>
+	</select>
+	
+	<!-- 메인, NEW 아이템 -->
+	<select id="mainNewItem"  resultType="hashMap">
+		<![CDATA[
+		 		SELECT * FROM 
+				(SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount, 
+                LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind , a.* 
+				FROM ( select * from goods where goods_onoff ='0' ) a INNER JOIN goods_kind b ON a.goods_number = b.goods_number 
+				GROUP BY a.goods_number, a.goods_name, a.goods_price, a.goods_DISPRICE, a.goods_shortdesc, a.goods_desc, a.goods_thumbnail,
+					a.goods_date, a.goods_category1, a.goods_category2, a.goods_saledate, a.goods_onoff, a.goods_count, a.goods_coordi 
+				ORDER BY a.goods_number DESC
+			) WHERE ROWNUM < 13
+		]]>
+	</select>
+	
+	<!-- 카테고리 별 인기상품 -->
+	<select id="goodsCategory" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT * FROM(
+			SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount, 
+			   LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* from
+			(select * from goods where goods_CATEGORY1=#{CATEGORY}  and goods_onoff ='0' ) a 
+			inner join goods_kind b on a.goods_number = b.goods_number 
+			group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+			order by sellcount desc,a.goods_number desc)
+			WHERE ROWNUM < 5	
+		]]>
+	</select>
+	
+	<!-- 졍렬 순에 따른 카테고리 -->
+	<select id="sortGoodsCategory" parameterType="hashMap" resultType="hashMap">
+		<choose>
+			<!-- 신상순 -->
+			
+			<when test="sort == 1">
+			<![CDATA[
+			    SELECT * from(
+				SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount, LISTAGG(b.goods_color, ',') 
+                within group(order by b.goods_color) as colorkind, a.* 
+				from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+				goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0'
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>
+		    <![CDATA[	 
+				) a inner join goods_kind b on a.goods_number = b.goods_number 
+				group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+				order by A.goods_number desc)
+			]]>
+			<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    </if>
+		    <if test="colorCheck == 'ON1'">
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	 </if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		    </if>
+		    <if test="colorCheck == 'ON2'">
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	</if>
+             	<foreach collection="color" item="color" separator="or">
+		         upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        </foreach>
+		    </if>
+			</when>
+			
+			<!-- 인기순 -->
+			<when test="sort == 2">
+			<![CDATA[
+				SELECT * from(
+				SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount, 
+				 LISTAGG(b.goods_color, ',') 
+                 within group(order by b.goods_color) as colorkind, a.* from
+				(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+				goods_CATEGORY1=#{CATEGORY}  and goods_onoff ='0' 
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>		    
+			<![CDATA[	 
+				) a 
+				inner join goods_kind b on a.goods_number = b.goods_number 
+				group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+				order by sellcount desc,a.goods_number desc)
+			]]>
+				<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    	</if>
+		    	 <if test="colorCheck == 'ON1'">
+		    	
+		    		<if test="soldOut =='on'">
+				 	and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    	 	where
+		    	 	</if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		    	</if>
+		    	<if test="colorCheck == 'ON2'">
+		    		<if test="soldOut =='on'">
+					 and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    		 where
+		    		</if>
+             		<foreach collection="color" item="color" separator="or">
+		         	upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        	</foreach>
+		   		 </if>
+			</when>
+			
+			<!-- 낮은가격 -->
+			<when test="sort == 3">
+			<![CDATA[
+				SELECT * from(
+				SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount,
+				   LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* 
+				from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+				goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0' 
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>
+		 	<![CDATA[	  
+			    )a inner join goods_kind b on a.goods_number = b.goods_number 
+				group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+				order by A.goods_DISPRICE ASC)
+			]]>
+				<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    	</if>
+		    	<if test="colorCheck == 'ON1'">
+		    	
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	 </if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		    	</if>
+		    	<if test="colorCheck == 'ON2'">
+		    		<if test="soldOut =='on'">
+					 and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    		 where
+		    		</if>
+             		<foreach collection="color" item="color" separator="or">
+		         	upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        	</foreach>
+		   		 </if>		    	
+			</when>
+			
+			<!-- 높은가격 -->
+			<when test="sort == 4">
+			<![CDATA[
+				SELECT * from(
+				SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount, 
+				  LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* 
+				from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+				goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0' 
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>
+		   	<![CDATA[	 
+				)a inner join goods_kind b on a.goods_number = b.goods_number 
+				group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+				order by A.goods_DISPRICE DESC)
+			]]>
+				<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    	</if>
+		    	<if test="colorCheck == 'ON1'">
+		    	
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	 </if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		   		 </if>
+		    	<if test="colorCheck == 'ON2'">
+		    		<if test="soldOut =='on'">
+					 and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    		 where
+		    		</if>
+             		<foreach collection="color" item="color" separator="or">
+		         	upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        	</foreach>
+		   		 </if>		   		 
+			</when>
+			
+			<!-- 할인율 -->
+			<when test="sort == 5">
+			<![CDATA[
+				SELECT * from(
+				SELECT((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100) as DCPERSENT,sum(a.goods_amount) as amount, count(DISTINCT a.GOODS_COLOR) as colorcount, 
+				  LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind,
+				GOODS_NUMBER,GOODS_NAME,GOODS_PRICE,GOODS_DISPRICE,GOODS_SHORTDESC,GOODS_DESC,GOODS_THUMBNAIL,GOODS_DATE,GOODS_CATEGORY1,GOODS_CATEGORY2,GOODS_SALEDATE,GOODS_ONOFF,GOODS_COUNT,GOODS_COORDI 
+				from(select * from goods natural join goods_kind) a where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+				goods_CATEGORY1= #{CATEGORY} and goods_onoff ='0' 
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>	    
+			<![CDATA[	 
+				group by GOODS_NUMBER,GOODS_NAME,GOODS_PRICE,GOODS_DISPRICE,GOODS_SHORTDESC,GOODS_DESC,GOODS_THUMBNAIL,GOODS_DATE,GOODS_CATEGORY1,GOODS_CATEGORY2,GOODS_SALEDATE,GOODS_ONOFF,GOODS_COUNT,GOODS_COORDI
+				order by DCPERSENT DESC, GOODS_NUMBER DESC)
+			]]>
+				<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    	</if>
+		    	<if test="colorCheck == 'ON1'">
+		    	
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	 </if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+			   </if>
+		    	<if test="colorCheck == 'ON2'">
+		    		<if test="soldOut =='on'">
+					 and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    		 where
+		    		</if>
+             		<foreach collection="color" item="color" separator="or">
+		         	upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        	</foreach>
+		   		 </if>			   
+			</when>
+			
+			<!-- 기본값 신상순 -->
+			<otherwise>
+			<![CDATA[
+				SELECT * from(
+				SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount, 
+				  LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.*  from
+				(select * from goods where goods_PRICE >= 1 and goods_price <= 100000 and
+				goods_CATEGORY1=#{CATEGORY}  and goods_onoff ='0' 
+			]]>
+				<if test="sale == 'on'">
+				<![CDATA[
+					and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+				]]>
+       			</if>		   
+			<![CDATA[	 
+				) a 
+				inner join goods_kind b on a.goods_number = b.goods_number 
+				group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+				order by sellcount desc,a.goods_number desc)
+			]]>
+				<if test="soldOut == 'on'">
+				<![CDATA[
+					WHERE AMOUNT <> 0
+				]]>
+		    	</if>
+		    	 <if test="colorCheck == 'ON1'">
+		    	
+		    	<if test="soldOut =='on'">
+				 and	    	
+		    	</if>
+		    	<if test="soldOut !='on'">
+		    	 where
+		    	 </if>
+		    	 upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		    	</if>
+		    	<if test="colorCheck == 'ON2'">
+		    		<if test="soldOut =='on'">
+					 and	    	
+		    		</if>
+		    		<if test="soldOut !='on'">
+		    		 where
+		    		</if>
+             		<foreach collection="color" item="color" separator="or">
+		         	upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+		        	</foreach>
+		   		 </if>		    	
+		    </otherwise>
+		</choose>
+	</select>
+	
+	<!-- 카테고리 소분류 + 칼라 + 가격 + 정렬 다합친 쿼리 -->
+	<!-- 대분류 정렬 후 소분류 클릭 시 리스트 -->
+	<!-- 1) 상단 해당 소분류 베스트 상품 -->
+   <select id="bestGoods" parameterType="hashMap" resultType="hashMap">
+      <![CDATA[
+         SELECT * FROM(
+         SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount,
+          LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.*  from
+         (select * from goods where goods_CATEGORY1=#{CATEGORY} and goods_category2 = #{SUBCATEGORY} and goods_onoff ='0' ) a 
+         inner join goods_kind b on a.goods_number = b.goods_number 
+         group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+         order by sellcount desc,a.goods_number desc)
+         WHERE ROWNUM < 5 
+      ]]>
+   </select>
+   
+   <!-- 중, 하단 소분류 별 모든 상품(기본값은 신상순) -->
+   <select id="allGoods" parameterType="hashMap" resultType="hashMap">
+      <choose>
+         <!-- 신상순 -->
+         
+         <when test="sort == 1">
+         <![CDATA[
+             SELECT * from(
+            SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount,
+               LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* 
+            from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+            goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>
+          <![CDATA[    
+            ) a inner join goods_kind b on a.goods_number = b.goods_number 
+            group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+            order by A.goods_number desc)
+         ]]>
+         <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+          </if>
+          <if test="colorCheck == 'ON1'">
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+              </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+          </if>
+          <if test="colorCheck == 'ON2'">
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+             </if>
+                <foreach collection="color" item="color" separator="or">
+               upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+              </foreach>
+          </if>
+         </when>
+         
+         <!-- 인기순 -->
+         <when test="sort == 2">
+         <![CDATA[
+            SELECT * from(
+            SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount,
+              LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* from
+            (select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+            goods_CATEGORY1=#{CATEGORY}  and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>          
+         <![CDATA[    
+            ) a 
+            inner join goods_kind b on a.goods_number = b.goods_number 
+            group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+            order by sellcount desc,a.goods_number desc)
+         ]]>
+            <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+             </if>
+              <if test="colorCheck == 'ON1'">
+             
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                 </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+             </if>
+             <if test="colorCheck == 'ON2'">
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                </if>
+                   <foreach collection="color" item="color" separator="or">
+                  upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                 </foreach>
+                </if>
+         </when>
+         <!-- 낮은가격 -->
+         <when test="sort == 3">
+         <![CDATA[
+            SELECT * from(
+            SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount, 
+            LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* 
+            from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+            goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>
+          <![CDATA[     
+             )a inner join goods_kind b on a.goods_number = b.goods_number 
+            group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+            order by A.goods_DISPRICE ASC)
+         ]]>
+            <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+             </if>
+             <if test="colorCheck == 'ON1'">
+             
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+              </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+             </if>
+             <if test="colorCheck == 'ON2'">
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                </if>
+                   <foreach collection="color" item="color" separator="or">
+                  upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                 </foreach>
+                </if>             
+         </when>
+         
+         <!-- 높은가격 -->
+         <when test="sort == 4">
+         <![CDATA[
+            SELECT * from(
+            SELECT sum(b.goods_amount) as amount, count(DISTINCT b.goods_color) as colorcount, 
+             LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.* 
+            from(select * from goods where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+            goods_CATEGORY1= #{CATEGORY}  and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>
+            <![CDATA[    
+            )a inner join goods_kind b on a.goods_number = b.goods_number 
+            group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+            order by A.goods_DISPRICE DESC)
+         ]]>
+            <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+             </if>
+             <if test="colorCheck == 'ON1'">
+             
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+              </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                </if>
+             <if test="colorCheck == 'ON2'">
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                </if>
+                   <foreach collection="color" item="color" separator="or">
+                  upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                 </foreach>
+                </if>                
+         </when>
+         
+         <!-- 할인율 -->
+         <when test="sort == 5">
+         <![CDATA[
+            SELECT * from(
+            SELECT((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100) as DCPERSENT,sum(a.goods_amount) as amount, count(DISTINCT a.GOODS_COLOR) as colorcount, 
+              LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind,
+            GOODS_NUMBER,GOODS_NAME,GOODS_PRICE,GOODS_DISPRICE,GOODS_SHORTDESC,GOODS_DESC,GOODS_THUMBNAIL,GOODS_DATE,GOODS_CATEGORY1,GOODS_CATEGORY2,GOODS_SALEDATE,GOODS_ONOFF,GOODS_COUNT,GOODS_COORDI 
+            from(select * from goods natural join goods_kind) a where goods_PRICE >= ${minimumPrice} and goods_price <= ${maximumPrice} and
+            goods_CATEGORY1= #{CATEGORY} and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>       
+         <![CDATA[    
+            group by GOODS_NUMBER,GOODS_NAME,GOODS_PRICE,GOODS_DISPRICE,GOODS_SHORTDESC,GOODS_DESC,GOODS_THUMBNAIL,GOODS_DATE,GOODS_CATEGORY1,GOODS_CATEGORY2,GOODS_SALEDATE,GOODS_ONOFF,GOODS_COUNT,GOODS_COORDI
+            order by DCPERSENT DESC, GOODS_NUMBER DESC)
+         ]]>
+            <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+             </if>
+             <if test="colorCheck == 'ON1'">
+             
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+              </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+            </if>
+             <if test="colorCheck == 'ON2'">
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                </if>
+                   <foreach collection="color" item="color" separator="or">
+                  upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                 </foreach>
+                </if>            
+         </when>
+         <!-- 기본값 신상순 -->
+         <otherwise>
+         <![CDATA[
+            SELECT * from(
+            SELECT sum(b.goods_amount) as amount, sum(b.goods_sellcount) as sellcount, count(DISTINCT b.goods_color) as colorcount,
+              LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind, a.*  from
+            (select * from goods where goods_PRICE >= 1 and goods_price <= 100000 and
+            goods_CATEGORY1=#{CATEGORY}  and goods_onoff ='0' and goods_category2 = #{SUBCATEGORY}
+         ]]>
+            <if test="sale == 'on'">
+            <![CDATA[
+               and NVL((GOODS_PRICE-GOODS_DISPRICE)/GOODS_PRICE*100,0) <> 0
+            ]]>
+                </if>         
+         <![CDATA[    
+            ) a 
+            inner join goods_kind b on a.goods_number = b.goods_number 
+            group by a.goods_number, a.goods_name, a.goods_price,a.goods_DISPRICE,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count,a.goods_coordi 
+            order by sellcount desc,a.goods_number desc)
+         ]]>
+            <if test="soldOut == 'on'">
+            <![CDATA[
+               WHERE AMOUNT <> 0
+            ]]>
+             </if>
+              <if test="colorCheck == 'ON1'">      
+             <if test="soldOut =='on'">
+             and          
+             </if>
+             <if test="soldOut !='on'">
+              where
+              </if>
+              upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+             </if>
+             <if test="colorCheck == 'ON2'">
+                <if test="soldOut =='on'">
+                and          
+                </if>
+                <if test="soldOut !='on'">
+                 where
+                </if>
+                   <foreach collection="color" item="color" separator="or">
+                  upper(COLORKIND) LIKE '%' || UPPER (#{color}) || '%'
+                 </foreach>
+                </if>             
+          </otherwise>
+      </choose>
+   </select>
+	
+	<!-- 검색 상품 리스트 -->
+	<select id="goodsSearchList" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			select sum(a.goods_amount) as amount, count(DISTINCT a.goods_color) as colorcount, 
+			  LISTAGG(b.goods_color, ',') 
+                  within group(order by b.goods_color) as colorkind,
+			a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,
+			a.goods_thumbnail,a.goods_date,a.goods_category1,
+			a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count 
+			from (select * from goods natural join goods_kind) A where goods_onoff ='0' 
+			and ( GOODS_NAME like '%'||#{isSearch}||'%' or GOODS_SHORTDESC like '%'||#{isSearch}||'% 'or GOODS_CATEGORY2 like '%'||#{isSearch}||'%'  ) 
+			group by a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count
+			order by GOODS_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 칼라 검색 상품 리스트 -->
+	<select id="goodsColorSearchList" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			select * from(
+			select sum(a.goods_amount) as amount, count(DISTINCT a.goods_color) as colorcount, 
+			  LISTAGG(a.goods_color, ',') 
+                  within group(order by a.goods_color) as colorkind,
+			a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,
+			a.goods_thumbnail,a.goods_date,a.goods_category1,
+			a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count 
+			from (select * from goods natural join goods_kind) A where goods_onoff ='0' 
+			group by a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count
+			order by GOODS_NUMBER DESC)
+			WHERE UPPER(COLORKIND) LIKE '%' || UPPER(#{searchColor}) || '%'
+		]]>
+	</select>
+		
+	<!-- 사이즈 검색 상품 리스트 -->
+	<select id="goodsSizeSearchList" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			select sum(a.goods_amount) as amount, count(DISTINCT a.goods_color) as colorcount, 
+			  LISTAGG(a.goods_color, ',') 
+                  within group(order by a.goods_color) as colorkind ,
+			a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,
+			a.goods_thumbnail,a.goods_date,a.goods_category1,
+			a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count 
+			from (select * from goods natural join goods_kind) A where goods_onoff ='0' 
+			and UPPER(GOODS_SIZE) = UPPER(#{searchSize})
+			group by a.goods_number, a.goods_name, a.goods_price,a.goods_disprice,a.goods_shortdesc,a.goods_desc,a.goods_thumbnail,a.goods_date,a.goods_category1,a.goods_category2,a.goods_saledate,a.goods_onoff,a.goods_count
+			order by GOODS_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 상품 상세보기 - 상품 가져오기 -->
+	<select id="selectOneGoods" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT A.*, D.*,
+			decode(D.GOODS_SIZE, 'xxs', '1','XXS', '1', 'xs', '2','XS', '2', 's', '3','S', '3', 'm', '4','M', '4',  'l', '5','L', '5', 'xl', '6','XL', '6', 'xxl', '7','XXL', '7','free', '8','FREE', '8','Free', '8') as SIZE_ORDER 
+			FROM GOODS A, GOODS_KIND D 
+			WHERE A.GOODS_NUMBER=D.GOODS_NUMBER AND A.GOODS_NUMBER=#{GOODS_NUMBER}
+			ORDER BY GOODS_COLOR ASC, SIZE_ORDER ASC
+		]]>
+	</select>
+	
+	<!-- 상품 상세보기 조회수 증가 -->
+	<update id="goodsCountUp" parameterType="hashMap">
+		<![CDATA[
+			UPDATE GOODS 
+			SET GOODS_COUNT = GOODS_COUNT + 1 
+			WHERE GOODS_NUMBER = #{GOODS_NUMBER}
+		]]>
+	</update>
+		<select id="selectCategoryCount" parameterType="string" resultType="hashMap">
+		<![CDATA[
+			select count(goods_number) as categoryCount, goods_category2 from goods where goods_category1=#{CATEGORY1}
+			GROUP BY goods_category2
+		]]>
+		</select>
+	
+	
+	<!-- 구매후기 작성을 위해 구매 체크 -->
+	<select id="checkBuy" parameterType="hashMap" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT DISTINCT GOODS_NUMBER 
+			FROM ORDERLIST 
+			WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} 
+			AND GOODS_NUMBER = #{GOODS_NUMBER} 
+			GROUP BY GOODS_NUMBER
+		]]>
+	</select>
+	
+	<!-- 상품 이미지 선택  -->
+	<select id="selectImage" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT * 
+			FROM GOODS_IMAGE 
+			WHERE GOODS_NUMBER = #{GOODS_NUMBER} 
+			ORDER BY GOODS_IMAGE_NUMBER ASC
+		]]>
+	</select>
+	
+	<!-- 코디 상품 호출(썸네일, 넘버) -->
+	<select id="selectRelatedGoods" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT GOODS_THUMBNAIL, GOODS_NUMBER, GOODS_NAME, GOODS_DISPRICE, GOODS_PRICE
+        	 FROM GOODS 
+         	WHERE GOODS_NUMBER = #{GOODS_NUMBER} 
+         	AND GOODS_ONOFF = 0
+		]]>
+	</select>
+	
+	<!-- 리뷰 평점 -->
+	<select id="reviewScore" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT ROUND(AVG(REVIEW_SCORE)*20,0) AS REVIEW_SCORE 
+			FROM REVIEW
+			WHERE GOODS_NUMBER = ${GOODS_NUMBER}
+		]]>
+	</select>
+	
+	<!-- 리뷰 꺼내오기 -->
+	<select id="selectReview" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT D.MEMBER_NUMBER, A.REVIEW_NUMBER, D.MEMBER_NAME,A.REVIEW_TITLE, A.REVIEW_CONTENT, A.REVIEW_SCORE * 20 AS REVIEW_SCORE, A.REVIEW_IMAGE, 
+			A.REVIEW_REGDATE FROM REVIEW A, MEMBER D 
+			WHERE GOODS_NUMBER = ${GOODS_NUMBER} 
+			AND D.MEMBER_NUMBER = A.MEMBER_NUMBER
+			ORDER BY REVIEW_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- Q&A 꺼내오기 -->
+	<select id="selectQNA" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT * 
+			FROM (SELECT * FROM QNA NATURAL JOIN MEMBER) A 
+			WHERE GOODS_NUMBER = #{GOODS_NUMBER} 
+			ORDER BY QNA_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 회원/비회원 상품 주문하기 -->
+	<!-- [1단계 상품상세보기에서 구매하기 눌렀을때 -> 선택한 상품/회원정보 보여주는 orderform
+		주문자정보 가져오기 + 포인트테이블에서 개별 포인트 sum해서 가져오기
+		1)구매자정보,배송지정보에 맴버테이블에서 꺼내온 값 보여주고
+		2)배송지정보에서 수정한 내역은 RECEIVER_ 로 수정해서 컨트롤러로 전송
+	-->
+	<select id="orderMember" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT 
+				M.MEMBER_NUMBER,
+				M.MEMBER_ID,
+				M.MEMBER_NAME,
+				M.MEMBER_PHONE,
+				M.MEMBER_EMAIL,
+				M.MEMBER_ZIPCODE,
+				M.MEMBER_ADDRESS1,
+				M.MEMBER_ADDRESS2,
+				SUM (P.POINT_POINT) MEMBER_POINT
+			FROM MEMBER M, POINT P
+			WHERE M.MEMBER_NUMBER = P.MEMBER_NUMBER
+			GROUP BY 
+				M.MEMBER_NUMBER, 
+				M.MEMBER_ID, 
+				M.MEMBER_NAME,
+				M.MEMBER_PHONE,
+				M.MEMBER_EMAIL,
+				M.MEMBER_ZIPCODE,
+				M.MEMBER_ADDRESS1,
+				M.MEMBER_ADDRESS2
+		]]>
+	</select>
+	
+<!-- AND M.MEMBER_NUMBER = ${MEMBER_NUMBER}   -->
+
+
+	<!-- orderGoods = orderService.orderGoods(commandMap.getMap()); -->
+	<select id="orderGoods" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT 
+				G.GOODS_NUMBER,
+				G.GOODS_NAME,
+				G.GOODS_PRICE,
+				G.GOODS_DISPRICE,
+				G.GOODS_THUMBNAIL,
+				G.GOODS_SALEDATE,
+				K.GOODS_AMOUNT,
+				K.GOODS_SIZE,
+				K.GOODS_COLOR,
+				K.GOODS_KIND_NUMBER,
+				G.GOODS_PRICE * ${EA} TOTALPRICE,
+				G.GOODS_DISPRICE * ${EA} TOTALDISPRICE
+			FROM GOODS G, GOODS_KIND K
+			WHERE G.GOODS_NUMBER = K.GOODS_NUMBER
+			AND G.GOODS_NUMBER = ${GOODS_NUMBER}
+			AND K.GOODS_KIND_NUMBER = ${GOODS_KIND_NUMBER}
+		]]>
+	</select>
+	
+	
+		<!-- orderGoods = orderService.orderGoods(commandMap.getMap()); -->
+	<select id="orderGoods2" parameterType="hashMap" resultType="hashMap">
+		<![CDATA[
+			SELECT 
+				G.GOODS_NUMBER,
+				G.GOODS_NAME,
+				G.GOODS_PRICE,
+				G.GOODS_DISPRICE,
+				G.GOODS_THUMBNAIL,
+				G.GOODS_SALEDATE,
+				K.GOODS_AMOUNT,
+				K.GOODS_SIZE,
+				K.GOODS_COLOR,
+				K.GOODS_KIND_NUMBER,
+				G.GOODS_PRICE * ${EA} TOTALPRICE,
+				G.GOODS_DISPRICE * ${EA} TOTALDISPRICE
+			FROM GOODS G, GOODS_KIND K
+			WHERE G.GOODS_NUMBER = K.GOODS_NUMBER
+			AND K.GOODS_KIND_NUMBER = ${GOODS_KIND_NUMBER}
+		]]>
+	</select>
+	
+	<!-- 배송내역 생성 -->
+	<insert id="createDeliveryList" parameterType="hashMap">
+		<![CDATA[
+			INSERT INTO DELIVERY(
+				ORDER_CODE,
+				MEMBER_NUMBER,
+				BUYER_ZIPCODE,
+				BUYER_ADDRESS1,
+				BUYER_ADDRESS2,
+				BUYER_NAME,
+				RECEIVER_NAME,
+				BUYER_NUMBER,
+				BUYER_EMAIL,
+				RECEIVER_ZIPCODE,
+				RECEIVER_ADDRESS1,
+				RECEIVER_ADDRESS2,
+				RECEIVER_NUMBER,
+				DELIVERY_MESSAGE,
+				TOTALPRICE) 
+			VALUES (
+				'${ORDER_CODE}',
+				'${MEMBER_NUMBER}',
+				'${BUYER_ZIPCODE}',
+				'${BUYER_ADDRESS1}',
+				'${BUYER_ADDRESS2}',
+				'${BUYER_NAME}',
+				'${RECEIVER_NAME}',
+				'${BUYER_NUMBER}',
+				'${BUYER_EMAIL}',
+				'${RECEIVER_ZIPCODE}',
+				'${RECEIVER_ADDRESS1}',
+				'${RECEIVER_ADDRESS2}',
+				'${RECEIVER_NUMBER}',
+				'${DELIVERY_MESSAGE}',
+				${TOTALPRICE}
+				)
+		]]>
+	</insert>
+	
+	<!-- 
+		INSERT INTO DELIVERY(
+				ORDER_CODE,
+				MEMBER_NUMBER,
+				BUYER_ZIPCODE,
+				BUYER_ADDRESS1,
+				BUYER_ADDRESS2,
+				BUYER_NAME,
+				RECEIVER_NAME,
+				BUYER_NUMBER,
+				BUYER_EMAIL,
+				RECEIVER_ZIPCODE,
+				RECEIVER_ADDRESS1,
+				RECEIVER_ADDRESS2,
+				RECEIVER_NUMBER,
+				DELIVERY_MESSAGE,
+				TOTALPRICE) 
+			VALUES (
+				'${ORDER_CODE}',
+				'${MEMBER_NUMBER}',
+				'${BUYER_ZIPCODE}',
+				'${BUYER_ADDRESS1}',
+				'${BUYER_ADDRESS2}',
+				'${BUYER_NAME}',
+				'${RECEIVER_NAME}',
+				'${BUYER_NUMBER}',
+				'${BUYER_EMAIL}',
+				'${RECEIVER_ZIPCODE}',
+				'${RECEIVER_ADDRESS1}',
+				'${RECEIVER_ADDRESS2}',
+				'${RECEIVER_NUMBER}',
+				'${DELIVERY_MESSAGE}',
+				${TOTALPRICE}
+				)
+	
+	 -->
+	
+	<!-- 주문내역 생성 -->
+	<insert id="createOrderList" parameterType="hashMap">
+		<![CDATA[
+			INSERT INTO ORDERLIST (
+				ORDER_NUMBER,
+				MEMBER_NUMBER,
+				GOODS_NUMBER,
+				ORDER_CODE,
+				ORDER_AMOUNT,
+				ORDER_DATE,
+				ORDER_DELIVERY_STATE,
+				ORDER_TOTAL_PRICE,
+				ORDER_PAY_STATE,
+				GOODS_KIND_NUMBER,
+				ORDER_STATE
+			) VALUES (
+				ORDER_NUMBER_SEQ.NEXTVAL,
+				'${MEMBER_NUMBER}',
+				'${GOODS_NUMBER}',
+				'${ORDER_CODE}',
+				'${ORDER_AMOUNT}',
+				SYSDATE,
+				'결제대기',
+				'${ORDER_TOTAL_PRICE}',
+				'결제대기',
+				'${GOODS_KIND_NUMBER}',
+				'주문진행중')
+		]]>
+	</insert>
+	
+	<!-- 상품 수량 수정(빼기) -->
+	<update id="goodsCountDown" parameterType="java.lang.Integer">
+		<![CDATA[
+        	UPDATE GOODS_KIND 
+        	SET GOODS_AMOUNT = GOODS_AMOUNT - #{ORDER_AMOUNT}, 
+        		GOODS_SELLCOUNT = GOODS_SELLCOUNT + #{ORDER_AMOUNT}
+         	WHERE GOODS_KIND_NUMBER = #{GOODS_KIND_NUMBER}
+      	]]>
+	</update>
+	
+	
+	<!-- 메인접근시 세일기간  오바된거 정리 -->
+   <update id="goodsSaleDate" parameterType="hashmap">
+      <![CDATA[
+         UPDATE GOODS SET GOODS_DISPRICE = GOODS_PRICE, GOODS_SALEDATE=NULL WHERE GOODS_SALEDATE<SYSDATE
+      ]]>
+   </update>
+	
+	
+	
+	<!-- 포인트 적립 -->
+	<insert id="insertPoint" parameterType="hashMap">
+		<![CDATA[
+			INSERT INTO POINT (
+				MEMBER_NUMBER,
+				POINT_CONTENT,
+				POINT_POINT,
+				POINT_DATE,
+				POINT_NUMBER,
+	  			ORDER_CODE)
+			VALUES (
+				#{MEMBER_NUMBER},
+				#{POINT_CONTENT},
+				#{POINT_POINT},
+				SYSDATE,
+				POINT_NUMBER_SEQ.NEXTVAL,
+				#{ORDER_CODE})
+		]]>
+	</insert>
+</mapper>

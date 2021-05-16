@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="adminMember">
+
+   <!-- 회원 전체 목록 -->
+   <select resultType="hashmap" parameterType="hashmap" id="selectMemberList">
+      <![CDATA[
+         SELECT 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_NAME,
+            M.MEMBER_JUMIN, 
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+            SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE MEMBER_ADMIN= '0'
+         AND M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         GROUP BY 
+            M.MEMBER_NUMBER, 
+            M.MEMBER_ID, 
+            M.MEMBER_NAME, 
+            M.MEMBER_JUMIN,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2
+         ORDER BY MEMBER_NUMBER DESC
+      ]]>
+   </select>
+   
+   <!-- 회원 상세정보 -->
+   <select resultType="hashmap" parameterType="hashmap" id="selectMemberDetail">
+      <![CDATA[
+         SELECT
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_PASSWORD,
+            M.MEMBER_NAME,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ZIPCODE,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         AND M.MEMBER_NUMBER = #{MEMBER_NUMBER}
+         GROUP BY 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_PASSWORD,
+            M.MEMBER_NAME,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ZIPCODE,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL
+      ]]>
+   </select>
+   
+   <!-- 회원 정보 수정 -->
+   <update parameterType="hashmap" id="updateMember">
+      <![CDATA[
+         UPDATE MEMBER
+         SET
+            MEMBER_PASSWORD = #{MEMBER_PASSWORD},
+            MEMBER_NAME = #{MEMBER_NAME},
+            MEMBER_ZIPCODE = #{MEMBER_ZIPCODE},
+            MEMBER_ADDRESS1 = #{MEMBER_ADDRESS1},
+            MEMBER_ADDRESS2 = #{MEMBER_ADDRESS2},
+            MEMBER_PHONE = #{MEMBER_PHONE},
+            MEMBER_EMAIL = #{MEMBER_EMAIL}
+         WHERE MEMBER_NUMBER = #{MEMBER_NUMBER}
+      ]]>
+   </update>
+   
+   <!-- 회원 삭제 -->
+   <delete id="deleteMember" parameterType="hashmap">
+      <![CDATA[
+         DELETE
+         FROM MEMBER 
+         WHERE MEMBER_NUMBER = #{MEMBER_NUMBER}
+      ]]>
+   </delete>
+   
+   <!-- 회원 포인트 수정 -->
+   <update parameterType="hashmap" id="updatePoint">
+      <![CDATA[
+         INSERT INTO POINT (
+            MEMBER_NUMBER,
+            POINT_CONTENT,
+            POINT_POINT,
+            POINT_DATE,
+            POINT_NUMBER)
+         VALUES
+            (#{MEMBER_NUMBER},
+            '관리자',
+            #{POINT_POINT},
+            SYSDATE,
+            POINT_NUMBER_SEQ.NEXTVAL)
+      ]]>
+   </update>
+   
+   <!-- 회원 아이디로 검색 -->
+   <select resultType="hashmap" parameterType="hashmap" id="searchMemberId">
+      <![CDATA[
+         SELECT 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+         SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE MEMBER_ID like '%' || #{isSearch} || '%'
+         AND M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         GROUP BY 
+            M.MEMBER_NUMBER, 
+            M.MEMBER_ID, 
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2
+         ORDER BY MEMBER_NUMBER DESC
+      ]]>
+   </select>
+   
+   <!-- 회원 이름으로 검색 -->
+   <select resultType="hashmap" parameterType="hashmap" id="searchMemberName">
+      <![CDATA[
+         SELECT 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+         SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE MEMBER_NAME like '%' || #{isSearch} || '%'
+         AND M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         GROUP BY 
+            M.MEMBER_NUMBER, 
+            M.MEMBER_ID, 
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2
+         ORDER BY MEMBER_NUMBER DESC
+      ]]>
+   </select>
+   
+   <!-- 회원 전화번호로 검색 -->
+   <select resultType="hashmap" parameterType="hashmap" id="searchMemberPhone">
+      <![CDATA[
+         SELECT 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+            M.MEMBER_REGDATE,
+            M.MEMBER_DELDATE,
+         SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE MEMBER_PHONE like '%' || #{isSearch} || '%'
+         AND M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         GROUP BY 
+            M.MEMBER_NUMBER, 
+            M.MEMBER_ID, 
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2
+         ORDER BY MEMBER_NUMBER DESC
+      ]]>
+   </select>
+   
+   <!-- 회원 이메일로 검색 -->
+   <select resultType="hashmap" parameterType="hashmap" id="searchMemberEmail">
+      <![CDATA[
+         SELECT 
+            M.MEMBER_NUMBER,
+            M.MEMBER_ID,
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2,
+            M.MEMBER_REGDATE,
+            M.MEMBER_DELDATE,
+         SUM (P.POINT_POINT) MEMBER_POINT
+         FROM MEMBER M, POINT P
+         WHERE MEMBER_EMAIL like '%' || #{isSearch} || '%'
+         AND M.MEMBER_NUMBER = P.MEMBER_NUMBER
+         GROUP BY 
+            M.MEMBER_NUMBER, 
+            M.MEMBER_ID, 
+            M.MEMBER_NAME,
+            M.MEMBER_PHONE,
+            M.MEMBER_EMAIL,
+            M.MEMBER_JUMIN,
+            M.MEMBER_ADDRESS1,
+            M.MEMBER_ADDRESS2
+         ORDER BY MEMBER_NUMBER DESC
+      ]]>
+   </select>
+</mapper>

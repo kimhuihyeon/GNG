@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mypage">
+		<select id="myinfoDetail" parameterType="String" resultType="hashmap">
+			<![CDATA[
+				SELECT * FROM MEMBER WHERE MEMBER_ID=#{MEMBER_ID}
+			]]>
+		</select>
+		<select id="selectOtoList" parameterType="String" resultType="hashmap">
+		     <![CDATA[
+		     	SELECT * FROM QNA WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND NOT QNA_CATEGORY='상품문의' order by qna_number desc
+		     ]]>
+		</select>
+		<select id="selectOtoComplete" parameterType="String" resultType="hashmap">
+			<![CDATA[
+				SELECT * FROM QNA WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND QNA_REPSTATE='문의종료' AND NOT QNA_CATEGORY='상품문의' order by qna_number desc
+			]]>
+		</select>
+		<select id="selectOtoCount" parameterType="String" resultType="int">
+		<![CDATA[
+				SELECT COUNT(*) FROM QNA WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND NOT QNA_CATEGORY = '상품문의'
+						]]>
+		</select>
+		
+		<select id="selectBuyCount" parameterType="String" resultType="int">
+		<![CDATA[
+				SELECT COUNT(*) FROM ORDERLIST WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_STATE = '주문진행중'
+						]]>
+		</select>
+		
+		<select id="selectExCount" parameterType="String" resultType="int">
+		<![CDATA[
+				SELECT COUNT(*) FROM ORDERLIST WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_STATE = '교환신청'
+						]]>
+		</select>
+		
+		<select id="selectReCount" parameterType="String" resultType="int">
+		<![CDATA[
+				SELECT COUNT(*) FROM ORDERLIST WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_STATE = '반품신청'
+						]]>
+		</select>
+		
+		<select id="selectTotalMoney" parameterType="String" resultType="String">
+		<![CDATA[
+				select sum(ORDER_TOTAL_PRICE) as totalPrice from orderlist where member_number = #{MEMBER_NUMBER} and ORDER_STATE in ('구매확정', '교환신청', '반품신청')
+						]]>
+		</select>
+		
+		<select id="selectMyPageTotal" parameterType="hashMap" resultType="String">
+		<![CDATA[
+	 		SELECT TOTALPRICE
+			FROM DELIVERY
+			WHERE MEMBER_NUMBER=#{MEMBER_NUMBER} AND ORDER_CODE=#{ORDER_CODE}				
+		]]>
+		</select>
+		
+	
+		
+		
+		<select id="checkTotalMoney" parameterType="String" resultType="int">
+			<![CDATA[
+				select count(*) from orderlist where member_number = #{member_number} and ORDER_STATE in ('구매확정', '교환신청', '반품신청') 
+			]]>
+		</select>
+		
+		<select id="selectReviewList" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		select A.REVIEW_NUMBER, A.GOODS_NUMBER, A.GOODS_NAME, A.GOODS_THUMBNAIL, A.REVIEW_TITLE, A.REVIEW_REGDATE, 
+		A.REVIEW_IMAGE, A.REVIEW_CONTENT, A.REVIEW_SCORE, A.MEMBER_NUMBER FROM (SELECT * FROM review NATURAL JOIN goods) A 
+		WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} ORDER BY REVIEW_NUMBER DESC
+		]]>
+		</select>
+		
+		<select id="selectOrderList" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		select A.ORDER_TOTAL_PRICE, A.ORDER_NUMBER, A.ORDER_AMOUNT, A.GOODS_NUMBER, C.GOODS_NAME, A.ORDER_DATE, A.ORDER_STATE, A.ORDER_CODE, A.ORDER_DELIVERY_STATE, A.ORDER_PAY_STATE, C.GOODS_THUMBNAIL 
+		from orderlist A, GOODS C WHERE 
+   		MEMBER_NUMBER = #{MEMBER_NUMBER} AND NOT A.ORDER_STATE IN ('반품신청', '반품완료', '교환신청', '교환완료') AND A.GOODS_NUMBER = C.GOODS_NUMBER 
+    	GROUP BY A.ORDER_TOTAL_PRICE, A.ORDER_AMOUNT, A.ORDER_NUMBER, C.GOODS_THUMBNAIL , A.GOODS_NUMBER, C.GOODS_NAME, A.ORDER_DATE, A.ORDER_STATE, A.ORDER_CODE, A.ORDER_DELIVERY_STATE, A.ORDER_PAY_STATE ORDER BY A.ORDER_DATE DESC
+		]]>
+		</select>
+		
+		<select id="selectReturnList" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		SELECT * FROM (SELECT * FROM ORDERLIST NATURAL JOIN GOODS) A WHERE ORDER_PAY_STATE='결제완료' AND ORDER_DELIVERY_STATE = '배송완료' AND ORDER_STATE IN ('구매확정', '반품신청', '반품완료') AND MEMBER_NUMBER = #{MEMBER_NUMBER} ORDER BY ORDER_DATE DESC
+		]]>
+		</select>
+		
+		<select id="selectExchangeList" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		SELECT * FROM (SELECT * FROM ORDERLIST NATURAL JOIN GOODS) A WHERE ORDER_PAY_STATE='결제완료' AND ORDER_DELIVERY_STATE = '배송완료' AND ORDER_STATE IN ('구매확정', '교환신청', '교환완료') AND MEMBER_NUMBER = #{MEMBER_NUMBER} ORDER BY ORDER_DATE DESC
+		]]>
+		</select>
+		
+		<insert id="insertCancelList" parameterType="hashmap">
+		<![CDATA[
+		INSERT INTO CANCEL
+		(CANCEL_NUMBER,
+		 ORDER_CODE,
+		 CANCEL_CONTENT,
+		 CANCEL_REGDATE,
+		 CANCEL_TITLE,
+		 CANCEL_CATEGORY
+		 ) VALUES (
+		 CANCEL_NUMBER_SEQ.NEXTVAL,
+		 #{ORDER_CODE},
+		 #{CANCEL_CONTENT},
+		 SYSDATE,
+		 #{CANCEL_TITLE},
+		 #{CANCEL_CATEGORY}
+		 )
+		]]>
+		</insert>
+		
+		<update id="changePassword" parameterType="hashmap">
+		<![CDATA[
+		UPDATE MEMBER SET MEMBER_PASSWORD = #{MEMBER_PASSWORD} WHERE MEMBER_ID=#{MEMBER_ID}
+		]]>
+		</update>
+		
+		<update id="cancelOrder" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '주문취소' ,ORDER_PAY_STATE = '결제취소', ORDER_DELIVERY_STATE = '배송취소' WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<update id="confirmOrder" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '구매확정' WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<update id="updateReturn" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '반품신청' WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<update id="updateExchange" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '교환신청' WHERE MEMBER_NUMBER = #{MEMBER_NUMBER} AND ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<update id="updateMyinfo" parameterType="hashmap">
+		<![CDATA[
+			UPDATE MEMBER SET MEMBER_PHONE=#{MEMBER_PHONE}, MEMBER_ZIPCODE=#{MEMBER_ZIPCODE}, MEMBER_ADDRESS1=#{MEMBER_ADDRESS1}, 
+			MEMBER_ADDRESS2=#{MEMBER_ADDRESS2}, MEMBER_EMAIL=#{MEMBER_EMAIL} WHERE MEMBER_ID=#{MEMBER_ID}
+		]]>
+		</update>
+		
+		<select id="qnaNewAlarm" parameterType="hashmap" resultType="int">
+		<![CDATA[
+		select COUNT(*)from qna where QNA_CATEGORY= '상품문의' and member_number = #{MEMBER_NUMBER} and (QNA_REPSTATE = '답변완료' or QNA_REPSTATE = '답변대기')
+		]]>
+		</select>
+		
+		<insert id="insertOneToOne" parameterType="hashmap">
+	 	<![CDATA[
+	    	INSERT INTO QNA (QNA_NUMBER, QNA_CATEGORY, MEMBER_NUMBER, QNA_CONTENT, QNA_IMAGE1, QNA_REGDATE, QNA_TITLE) VALUES (QNA_NUMBER_SEQ.NEXTVAL, #{QNA_CATEGORY}, #{MEMBER_NUMBER}, #{QNA_CONTENT}, #{QNA_IMAGE1}, SYSDATE, #{QNA_TITLE})
+	  	]]>
+		</insert>
+		
+		<update id="updateRepState" parameterType="hashmap">	
+		<![CDATA[
+			UPDATE QNA SET QNA_REPSTATE='문의종료' WHERE QNA_NUMBER = #{QNA_NUMBER}
+		]]>
+		</update>
+		
+		<select id="qnalistByNumber" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		  select A.QNA_NUMBER, A.GOODS_NUMBER, A.GOODS_NAME, A.GOODS_THUMBNAIL, A.QNA_TITLE, A.QNA_CONTENT, A.QNA_REGDATE, A.QNA_REPSTATE, A.QNA_REPCONTENT, A.QNA_REPDATE
+			FROM (select * from goods natural join qna) A WHERE QNA_CATEGORY = '상품문의' AND MEMBER_NUMBER = #{MEMBER_NUMBER}  AND ( QNA_REPSTATE = '답변대기' OR QNA_REPSTATE = '답변완료') 
+			GROUP BY A.QNA_NUMBER, A.GOODS_NUMBER, A.GOODS_NAME, A.GOODS_THUMBNAIL, A.QNA_TITLE, A.QNA_CONTENT, A.QNA_REGDATE, A.QNA_REPSTATE, A.QNA_REPCONTENT, A.QNA_REPDATE ORDER BY QNA_REGDATE DESC
+		]]>
+		</select>
+		
+		<select id="qnalistByNumber2" parameterType="String" resultType="hashmap">
+		<![CDATA[
+		  select A.QNA_NUMBER, A.GOODS_NUMBER, A.GOODS_NAME, A.GOODS_THUMBNAIL, A.QNA_TITLE, A.QNA_CONTENT, A.QNA_REGDATE, A.QNA_REPSTATE, A.QNA_REPCONTENT, A.QNA_REPDATE
+			FROM (select * from goods natural join qna) A WHERE QNA_CATEGORY = '상품문의' AND MEMBER_NUMBER = #{MEMBER_NUMBER}  AND QNA_REPSTATE ='문의종료' 
+			GROUP BY A.QNA_NUMBER, A.GOODS_NUMBER, A.GOODS_NAME, A.GOODS_THUMBNAIL, A.QNA_TITLE, A.QNA_CONTENT, A.QNA_REGDATE, A.QNA_REPSTATE, A.QNA_REPCONTENT, A.QNA_REPDATE ORDER BY QNA_REGDATE DESC
+		]]>
+		</select>
+		
+		<select id="sumPoint" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT 
+				SUM(POINT_POINT) AS SUM
+			
+			FROM 
+				POINT 
+			WHERE 
+				MEMBER_NUMBER = ${MEMBER_NUMBER}
+		]]>
+		</select>
+		
+		<select id="myPoint" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+		
+			SELECT 
+				POINT_CONTENT, 
+				POINT_POINT, 
+				POINT_DATE, 
+				POINT_NUMBER
+			FROM 
+				POINT 
+			WHERE 
+				MEMBER_NUMBER = ${MEMBER_NUMBER}
+			ORDER BY POINT_DATE DESC
+			
+		]]>
+		</select>
+		
+				
+		<update id="nocancelOrder" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '주문취소' ,ORDER_PAY_STATE = '결제취소', ORDER_DELIVERY_STATE = '배송취소' WHERE ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<update id="noConfirmOrder" parameterType="hashmap">
+		<![CDATA[
+		UPDATE ORDERLIST SET ORDER_STATE = '구매확정' WHERE ORDER_CODE = #{ORDER_CODE}
+		]]>
+		</update>
+		
+		<delete id="mDeleteMember" parameterType="hashmap">
+      	<![CDATA[
+         DELETE
+         FROM MEMBER 
+         WHERE MEMBER_NUMBER = #{MEMBER_NUMBER}
+      	]]>
+   		</delete>
+		
+</mapper>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ad">
+
+	<!-- 광고 리스트 -->
+   <select resultType="hashmap" parameterType="hashmap" id="adList">
+	   <![CDATA[ 
+		   SELECT 
+		      * 
+		   FROM AD 
+		   ORDER BY AD_NUMBER DESC
+	   ]]>
+   </select>
+	
+	<!-- 광고 상세보기 -->
+   <select resultType="hashmap" parameterType="hashmap" id="selectAdDetail">
+	   <![CDATA[
+		   SELECT
+		      *
+		   FROM AD
+		   WHERE AD_NUMBER = #{AD_NUMBER}
+		   ORDER BY AD_NUMBER DESC
+	   ]]>
+   </select>
+	
+	<!-- 광고 검색 -->
+   <select resultType="hashmap" parameterType="hashmap" id="searchAdList">
+	   <![CDATA[
+		   SELECT
+		      *
+		   FROM AD
+		   WHERE AD_POSTING = #{posting}
+		   AND AD_NAME like '%' || #{isSearch} || '%'
+		   ORDER BY AD_NUMBER DESC
+	   ]]>
+   </select>
+
+	<!-- 광고 등록 -->
+   <insert parameterType="hashmap" id="adWrite">
+      <![CDATA[
+	      INSERT INTO AD (
+	         AD_NUMBER,
+	         AD_POSTING,
+	         AD_IMAGE,
+	         AD_DATE,
+	         AD_NAME)
+	      VALUES
+	         (AD_NUMBER_SEQ.NEXTVAL,
+	          #{posting, jdbcType=INTEGER},
+	          #{AD_IMAGE, jdbcType=VARCHAR},
+	          SYSDATE,
+	          #{AD_NAME, jdbcType=VARCHAR}
+	         )
+      ]]>
+   </insert>
+
+	<!-- 광고 수정 -->
+   <update parameterType="hashmap" id="adModify">
+      <![CDATA[
+	      UPDATE AD
+	      SET
+	         AD_POSTING = #{posting},
+	         AD_IMAGE = #{AD_IMAGE},
+	         AD_NAME = #{AD_NAME}
+	      WHERE AD_NUMBER = #{AD_NUMBER}
+      ]]>
+   </update>
+
+	<!-- 광고 삭제 -->
+   <update parameterType="hashmap" id="adDelete">
+      <![CDATA[
+	      DELETE AD
+	      WHERE AD_NUMBER = #{AD_NUMBER}
+      ]]>
+   </update>
+	
+	<!-- 메인 광고 띄우기 -->
+   <select id="mainAdImage" parameterType="hashMap" resultType="hashmap">
+   <![CDATA[ 
+      SELECT AD_IMAGE FROM AD WHERE AD_POSTING IN (1,2) ORDER BY AD_POSTING
+   ]]>
+   </select>
+</mapper>

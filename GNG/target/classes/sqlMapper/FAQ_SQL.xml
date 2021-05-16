@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="faq">
+
+	<!-- faq 관리자 페이지 전체 리스트 -->
+	<select id="faqList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- faq 글쓰기 -->
+	<insert id="faqWrite" parameterType="hashmap" useGeneratedKeys="true"
+		keyProperty="FAQ_NUMBER">
+		<selectKey keyProperty="FAQ_NUMBER" resultType="string"
+			order="BEFORE">
+			SELECT FAQ_NUMBER_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		<![CDATA[
+			INSERT INTO FAQ
+			(
+				FAQ_NUMBER,
+				FAQ_CATEGORY,
+			    FAQ_TITLE, 
+			    FAQ_CONTENT, 
+			    FAQ_HITCOUNT
+			)
+			VALUES
+			(
+				#{FAQ_NUMBER}, 
+				#{FAQ_CATEGORY},
+			    #{FAQ_TITLE}, 
+			    #{FAQ_CONTENT},
+			    0
+			)
+			
+			
+		]]>
+	</insert>
+	
+	<!-- faq 수정하기 -->
+	<update id="faqModify" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FAQ 
+			SET
+				FAQ_CATEGORY = #{FAQ_CATEGORY},
+				FAQ_TITLE = #{FAQ_TITLE},
+				FAQ_CONTENT = #{FAQ_CONTENT}
+			WHERE
+				FAQ_NUMBER = #{FAQ_NUMBER}	
+		]]>
+	</update>
+	
+	<!-- faq 삭제하기 -->
+	<delete id="faqDelete" parameterType="hashmap">
+		<![CDATA[
+			DELETE FAQ
+			WHERE
+				FAQ_NUMBER = #{FAQ_NUMBER}
+		]]>
+	</delete>
+	
+	<!-- faq 제목 검색 -->
+	<select id="searchTitleList" resultType="hashmap" parameterType="hashmap">
+			<![CDATA[
+		SELECT 
+			FAQ_NUMBER,
+			FAQ_TITLE,
+			FAQ_HITCOUNT
+		FROM FAQ
+		WHERE FAQ_TITLE like '%'||#{isSearch}||'%'
+		ORDER BY FAQ_NUMBER DESC
+	]]>
+	</select>
+	
+	<!-- faq 글 내용 검색 -->
+	<select id="searchContentList" resultType="hashmap"
+		parameterType="hashmap">
+			<![CDATA[
+		SELECT 
+			FAQ_NUMBER,
+			FAQ_TITLE,
+			FAQ_CONTENT,
+			FAQ_HITCOUNT
+		FROM FAQ
+		WHERE FAQ_CONTENT like '%'||#{isSearch}||'%'
+		ORDER BY FAQ_NUMBER DESC
+	]]>
+	</select>
+	
+	<!-- faq 파일첨부 -->
+	<update id="faqImage1" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FAQ 
+			SET 
+				FAQ_IMAGE1 = #{FAQ_IMAGE1} 
+			WHERE 
+				FAQ_NUMBER = #{FAQ_NUMBER}
+		]]>
+	</update>
+	
+	<!-- faq 상세보기 -->
+	<select id="faqDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				FAQ_NUMBER,
+				FAQ_CATEGORY,
+				FAQ_HITCOUNT,
+				FAQ_TITLE,
+				FAQ_CONTENT,
+				FAQ_IMAGE1
+			FROM
+				FAQ
+			WHERE
+				FAQ_NUMBER = #{FAQ_NUMBER}		
+		]]>
+	</select>
+	
+	<!-- faq 조회수 -->
+	<update id="updateHitCnt" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FAQ 
+			SET
+				FAQ_HITCOUNT = NVL(FAQ_HITCOUNT, 0) + 1
+			WHERE
+				FAQ_NUMBER = #{FAQ_NUMBER}	
+		]]>
+	</update>
+	
+	<!-- 회원안내 카테고리 리스트 -->
+	<select id="faqList1" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='회원안내'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 배송안내 카테고리 리스트 -->
+	<select id="faqList2" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='배송안내'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 주문결제 카테고리 리스트 -->
+	<select id="faqList3" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='주문결제'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 주문취소/변경 카테고리 리스트 -->
+	<select id="faqList4" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='주문취소/변경'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 교환/반품 카테고리 리스트 -->
+	<select id="faqList5" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='교환/반품'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 환불 카테고리 리스트 -->
+	<select id="faqList6" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='환불'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 상품 카테고리 리스트 -->
+	<select id="faqList7" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='상품'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- A/S 카테고리 리스트 -->
+	<select id="faqList8" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='A/S'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 거래증빙서류안내 카테고리 리스트 -->
+	<select id="faqList9" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='거래증빙서류안내'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+	<!-- 사이트 이용안내 카테고리 리스트 -->
+	<select id="faqList10" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+			    FAQ_NUMBER,
+			    FAQ_CATEGORY,
+			    FAQ_TITLE,
+			    FAQ_HITCOUNT,
+			    FAQ_CONTENT,
+			    FAQ_IMAGE1
+			FROM
+			    FAQ 
+			WHERE 
+				FAQ_CATEGORY='사이트이용안내'
+			ORDER BY FAQ_NUMBER DESC
+		]]>
+	</select>
+	
+</mapper>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
